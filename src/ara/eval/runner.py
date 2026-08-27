@@ -158,63 +158,84 @@ async def run_agent_evals(
     console: Console | None = None,
 ) -> dict:
     """Run gold cases through the full agent loop. Costs API credits."""
+    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
+
     from ara.agent import run_agent_loop
 
     console = console or Console()
     console.print("\n[bold yellow]Running Agent-Level Evals (Tier 2 — uses API credits)[/bold yellow]\n")
 
     results = []
-    for case in GOLD_SET:
-        query = case.agent_query or case.query
-        start = time.monotonic()
-        try:
-            papers, iterations = await run_agent_loop(
-                query,
-                model=model,
-                max_results=5,
-                intent_profile=None,
-            )
-        except Exception as e:
+    total = len(GOLD_SET)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold]{task.description}[/bold]"),
+        BarColumn(bar_width=30),
+        MofNCompleteColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        overall = progress.add_task("Agent evals", total=total)
+
+        for i, case in enumerate(GOLD_SET):
+            query = case.agent_query or case.query
+            progress.update(overall, description=f"[{i + 1}/{total}] {case.name}")
+            start = time.monotonic()
+            try:
+                papers, iterations = await run_agent_loop(
+                    query,
+                    model=model,
+                    max_results=5,
+                    intent_profile=None,
+                )
+            except Exception as e:
+                results.append({
+                    "case_name": case.name,
+                    "query": query,
+                    "passed": False,
+                    "recall": 0.0,
+                    "hits": [],
+                    "misses": [ep.title_contains for ep in case.expected_papers],
+                    "papers_found": 0,
+                    "iterations": 0,
+                    "duration_seconds": round(time.monotonic() - start, 1),
+                    "error": str(e),
+                })
+                progress.advance(overall)
+                continue
+
+            duration = time.monotonic() - start
+            paper_dicts = [{"doi": p.doi, "arxiv_id": p.arxiv_id, "title": p.title} for p in papers]
+
+            hits = []
+            misses = []
+            for expected in case.expected_papers:
+                found = any(_paper_matches(p, expected) for p in paper_dicts)
+                if found:
+                    hits.append(expected.title_contains)
+                else:
+                    misses.append(expected.title_contains)
+
+            total_expected = len(case.expected_papers)
+            recall = len(hits) / total_expected if total_expected else 1.0
+            passed = recall >= case.min_recall
+
+            status = "[green]PASS[/green]" if passed else "[red]FAIL[/red]"
+            console.print(f"  {status} {case.name} [dim]({round(duration)}s, {iterations} iters)[/dim]")
+
             results.append({
                 "case_name": case.name,
                 "query": query,
-                "passed": False,
-                "recall": 0.0,
-                "hits": [],
-                "misses": [ep.title_contains for ep in case.expected_papers],
-                "papers_found": 0,
-                "iterations": 0,
-                "duration_seconds": round(time.monotonic() - start, 1),
-                "error": str(e),
+                "passed": passed,
+                "recall": round(recall, 2),
+                "hits": hits,
+                "misses": misses,
+                "papers_found": len(papers),
+                "iterations": iterations,
+                "duration_seconds": round(duration, 1),
             })
-            continue
-
-        duration = time.monotonic() - start
-        paper_dicts = [{"doi": p.doi, "arxiv_id": p.arxiv_id, "title": p.title} for p in papers]
-
-        hits = []
-        misses = []
-        for expected in case.expected_papers:
-            found = any(_paper_matches(p, expected) for p in paper_dicts)
-            if found:
-                hits.append(expected.title_contains)
-            else:
-                misses.append(expected.title_contains)
-
-        total_expected = len(case.expected_papers)
-        recall = len(hits) / total_expected if total_expected else 1.0
-
-        results.append({
-            "case_name": case.name,
-            "query": query,
-            "passed": recall >= case.min_recall,
-            "recall": round(recall, 2),
-            "hits": hits,
-            "misses": misses,
-            "papers_found": len(papers),
-            "iterations": iterations,
-            "duration_seconds": round(duration, 1),
-        })
+            progress.advance(overall)
 
     passed = sum(1 for r in results if r["passed"])
     total = len(results)
