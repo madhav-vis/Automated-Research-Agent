@@ -1,8 +1,8 @@
 # ARA: Automated Research Agent
 
-An agentic CLI that searches academic literature using Claude's tool-use API. ARA implements the ReAct (Reason + Act) pattern from scratch to iteratively query OpenAlex and arXiv, validate every result against CrossRef, and present citation-verified papers in the terminal.
+An agentic CLI that searches academic literature using Claude's tool-use API. ARA implements the ReAct (Reason + Act) pattern from scratch to iteratively query OpenAlex and arXiv, then present real, citable papers in the terminal.
 
-Built to solve a real problem: LLMs hallucinate paper titles, authors, and DOIs. ARA enforces a **hallucination firewall** such that the LLM never generates metadata. Every title, author list, and DOI comes from a valid API response.
+Built to solve a real problem: LLMs hallucinate paper titles, authors, and DOIs when asked to recommend research. ARA sidesteps this entirely — Claude never generates metadata. Instead, it reasons about *what* to search and calls tools that hit real academic APIs. Every title, author list, DOI, and citation count comes directly from OpenAlex or arXiv, not from the model.
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Claude API](https://img.shields.io/badge/Claude-Tool_Use-blueviolet)
@@ -33,21 +33,16 @@ User query
 │                                             │
 │  while not done:                            │
 │    Claude reasons about what to search      │
-│    ├── search_openalex(query, filters)      │
-│    ├── search_arxiv(query, category)        │
-│    ├── get_paper_details(doi/arxiv_id)      │
+│    ├── search_openalex(query, filters)  ──► real API call │
+│    ├── search_arxiv(query, category)    ──► real API call │
+│    ├── get_paper_details(doi/arxiv_id)  ──► real API call │
 │    ├── check_coverage(papers, intent)       │
 │    └── filter_results(papers, year_range)   │
 │    Claude observes results, decides next    │
 │    step or calls finish_search              │
-└─────────────────┬───────────────────────────┘
-                  │
-                  ▼
-┌─────────────────────────────────────────────┐
-│  Hallucination Firewall (validator.py)      │
-│  Every DOI re-validated against CrossRef    │
-│  arXiv IDs checked by regex                 │
-│  Papers with no verifiable ID → rejected    │
+│                                             │
+│  All paper metadata comes from API          │
+│  responses — Claude never generates it      │
 └─────────────────┬───────────────────────────┘
                   │
                   ▼
@@ -62,7 +57,7 @@ User query
 
 **No frameworks.** The agent loop is an explicit `while` loop that sends messages to the Claude API, dispatches tool calls, and feeds results back. This makes the control flow readable and debuggable — you can step through every iteration.
 
-**Claude never invents metadata.** The system prompt forbids fabrication, but prompts are not a safety mechanism. The real enforcement is structural: tool functions return only API data.
+**Claude never invents metadata.** The model only *decides* what to search for — actual paper data comes exclusively from tool calls to OpenAlex and arXiv. This is a structural guarantee, not a prompt-engineering one: Claude physically cannot return a paper that doesn't exist in a real database because it never generates metadata itself.
 
 **Coverage-aware search.** The agent doesn't just fire one query and stop. It uses a `check_coverage` tool to assess whether the current paper set covers all dimensions of the user's intent (methods, recency, source diversity), then searches again to fill gaps.
 
@@ -72,7 +67,7 @@ User query
 
 - **Multi-source search** — queries both OpenAlex (200M+ works with citation data) and arXiv (preprints) in parallel
 - **Conversational narrowing** — refines vague queries into structured search profiles before searching
-- **DOI validation** — every paper's DOI is verified against CrossRef; unverifiable papers are rejected
+- **No hallucinated papers** — all metadata flows through tool calls to real academic APIs; Claude decides *what* to search, never *what to return*
 - **Citation-aware ranking** — results include citation counts from OpenAlex
 - **"Find similar" flow** — select a paper from results and search for related work, with automatic deduplication
 - **Zotero integration** — save papers directly to your Zotero library (v7+ via Connector API, v10+ via local API with collection support)
@@ -128,7 +123,7 @@ src/ara/
 ├── cli.py          # Typer CLI, async pipeline orchestration
 ├── agent.py        # ReAct loop — message passing with Claude tool use
 ├── tools.py        # Tool schemas + async implementations (OpenAlex, arXiv)
-├── validator.py    # Post-loop DOI validation against CrossRef
+├── validator.py    # Post-loop paper validation
 ├── models.py       # Pydantic models (Paper, SearchIntentProfile)
 ├── dialogue.py     # Conversational intent extraction via Claude
 ├── presenter.py    # Rich output formatting
@@ -149,7 +144,6 @@ src/ara/
 | LLM | Claude (Anthropic API) | Native tool use, structured output |
 | Agent pattern | ReAct, hand-rolled | Full control over the loop, no framework overhead |
 | Academic data | OpenAlex + arXiv | Free, comprehensive, complementary (journals + preprints) |
-| Validation | CrossRef | Independent DOI verification |
 | Data models | Pydantic | Type-safe paper metadata |
 | CLI | Typer | Declarative argument parsing |
 | HTTP | httpx | Async, connection pooling |
