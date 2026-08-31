@@ -5,3 +5,4 @@ dist/
 build/
 .DS_Store
 .research_cli/
+demo.tape

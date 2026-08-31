@@ -156,6 +156,7 @@ async def run_tool_evals(
 async def run_agent_evals(
     model: str = "claude-sonnet-4-5",
     console: Console | None = None,
+    case_filter: str | None = None,
 ) -> dict:
     """Run gold cases through the full agent loop. Costs API credits."""
     from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, MofNCompleteColumn, TimeElapsedColumn
@@ -163,10 +164,18 @@ async def run_agent_evals(
     from ara.agent import run_agent_loop
 
     console = console or Console()
+    cases = GOLD_SET
+    if case_filter:
+        cases = [c for c in GOLD_SET if c.name == case_filter]
+        if not cases:
+            console.print(f"[red]No eval case named '{case_filter}'[/red]")
+            valid = ", ".join(c.name for c in GOLD_SET)
+            console.print(f"[dim]Available: {valid}[/dim]")
+            return {"tier": "agent", "error": "case not found"}
     console.print("\n[bold yellow]Running Agent-Level Evals (Tier 2 — uses API credits)[/bold yellow]\n")
 
     results = []
-    total = len(GOLD_SET)
+    total = len(cases)
 
     with Progress(
         SpinnerColumn(),
@@ -178,7 +187,7 @@ async def run_agent_evals(
     ) as progress:
         overall = progress.add_task("Agent evals", total=total)
 
-        for i, case in enumerate(GOLD_SET):
+        for i, case in enumerate(cases):
             query = case.agent_query or case.query
             progress.update(overall, description=f"[{i + 1}/{total}] {case.name}")
             start = time.monotonic()
@@ -187,7 +196,7 @@ async def run_agent_evals(
                     query,
                     model=model,
                     max_results=5,
-                    intent_profile=None,
+                    intent_profile=case.intent_profile,
                 )
             except Exception as e:
                 results.append({

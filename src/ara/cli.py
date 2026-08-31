@@ -61,6 +61,7 @@ def search(
     quick: bool = typer.Option(False, "--quick", "-q", help="Skip narrowing dialogue and search immediately"),
     eval_mode: bool = typer.Option(False, "--eval", help="Run tool-level evals (free, no LLM)"),
     eval_agent: bool = typer.Option(False, "--eval-agent", help="Run agent-level evals (uses API credits)"),
+    eval_case: str = typer.Option("", "--eval-case", help="Run only this eval case by name (e.g. 'bert')"),
 ) -> None:
     """Search for academic papers on a topic using an AI research agent."""
     if verbose:
@@ -70,7 +71,7 @@ def search(
         asyncio.run(_run_tool_eval())
         return
     if eval_agent:
-        asyncio.run(_run_agent_eval(model))
+        asyncio.run(_run_agent_eval(model, case_filter=eval_case or None))
         return
 
     if not topic:
@@ -93,8 +94,7 @@ async def _search(topic: str, max_results: int, model: str, quick: bool, show_ba
     if show_banner:
         static_banner(console)
     console.print(f"  Topic: [bold]{topic}[/bold]")
-    console.print(f"  Model: [dim]{model}[/dim]")
-    console.print(f"  Max results: [dim]{max_results}[/dim]\n")
+    console.print(f"  Model: [dim]{model}[/dim]\n")
 
     if not quick and intent_profile is None:
         console.print("[bold]Let me ask a few questions to refine your search...[/bold]")
@@ -102,13 +102,6 @@ async def _search(topic: str, max_results: int, model: str, quick: bool, show_ba
             topic, model=model, console=console
         )
         display_intent_profile(intent_profile)
-
-        count_str = styled_input(
-            f"How many papers would you like? [dim](default: {max_results})[/dim]",
-            console=console,
-        )
-        if count_str.strip().isdigit():
-            max_results = int(count_str.strip())
 
     console.print()
     _spinner = console.status("[bold]Finding papers...[/bold]", spinner="dots")
@@ -232,7 +225,7 @@ async def _run_tool_eval() -> None:
     await run_tool_evals(console=console)
 
 
-async def _run_agent_eval(model: str) -> None:
+async def _run_agent_eval(model: str, case_filter: str | None = None) -> None:
     """Run agent-level evals (costs API credits)."""
     static_banner(console)
-    await run_agent_evals(model=model, console=console)
+    await run_agent_evals(model=model, console=console, case_filter=case_filter)

@@ -288,10 +288,13 @@ def _parse_final_response(text: str) -> list[Paper]:
     for item in items:
         if not isinstance(item, dict):
             continue
+        raw_authors = item.get("authors", [])
+        if isinstance(raw_authors, str):
+            raw_authors = [a.strip() for a in raw_authors.split(",") if a.strip()]
         papers.append(
             Paper(
                 title=item.get("title", ""),
-                authors=item.get("authors", []),
+                authors=raw_authors,
                 year=item.get("year"),
                 doi=item.get("doi"),
                 arxiv_id=item.get("arxiv_id"),
