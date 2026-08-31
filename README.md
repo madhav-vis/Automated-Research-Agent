@@ -67,7 +67,6 @@ User query
 
 - **Multi-source search** — queries both OpenAlex (200M+ works with citation data) and arXiv (preprints) in parallel
 - **Conversational narrowing** — refines vague queries into structured search profiles before searching
-- **No hallucinated papers** — all metadata flows through tool calls to real academic APIs; Claude decides *what* to search, never *what to return*
 - **Citation-aware ranking** — results include citation counts from OpenAlex
 - **"Find similar" flow** — select a paper from results and search for related work, with automatic deduplication
 - **Zotero integration** — save papers directly to your Zotero library (v7+ via Connector API, v10+ via local API with collection support)
@@ -123,7 +122,6 @@ src/ara/
 ├── cli.py          # Typer CLI, async pipeline orchestration
 ├── agent.py        # ReAct loop — message passing with Claude tool use
 ├── tools.py        # Tool schemas + async implementations (OpenAlex, arXiv)
-├── validator.py    # Post-loop paper validation
 ├── models.py       # Pydantic models (Paper, SearchIntentProfile)
 ├── dialogue.py     # Conversational intent extraction via Claude
 ├── presenter.py    # Rich output formatting
