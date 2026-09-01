@@ -2,7 +2,7 @@
 
 An agentic CLI that searches academic literature using Claude's tool-use API. ARA implements the ReAct (Reason + Act) pattern from scratch to iteratively query OpenAlex and arXiv, then present real, citable papers in the terminal.
 
-Built to solve a real problem: LLMs hallucinate paper titles, authors, and DOIs when asked to recommend research. ARA sidesteps this entirely — Claude never generates metadata. Instead, it reasons about *what* to search and calls tools that hit real academic APIs. Every title, author list, DOI, and citation count comes directly from OpenAlex or arXiv, not from the model.
+Built to solve a real problem: LLMs hallucinate paper titles, authors, and DOIs when asked to recommend research. ARA sidesteps this entirely - Claude never generates metadata. Instead, it reasons about *what* to search and calls tools that hit real academic APIs. Every title, author list, DOI, and citation count comes directly from OpenAlex or arXiv, not from the model.
 
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Claude API](https://img.shields.io/badge/Claude-Tool_Use-blueviolet)
@@ -11,7 +11,7 @@ Built to solve a real problem: LLMs hallucinate paper titles, authors, and DOIs 
 ## Demo
 
 <p align="center">
-  <img src="demo.gif" alt="ARA demo — searching for papers on transformer architectures for protein structure prediction" width="800">
+  <img src="demo.gif" alt="ARA demo - searching for papers on transformer architectures for protein structure prediction" width="800">
 </p>
 
 ## How It Works
@@ -33,16 +33,16 @@ User query
 │                                             │
 │  while not done:                            │
 │    Claude reasons about what to search      │
-│    ├── search_openalex(query, filters)  ──► real API call │
-│    ├── search_arxiv(query, category)    ──► real API call │
-│    ├── get_paper_details(doi/arxiv_id)  ──► real API call │
+│    ├── search_openalex(query, filters)      │
+│    ├── search_arxiv(query, category)        │
+│    ├── get_paper_details(doi/arxiv_id)      │
 │    ├── check_coverage(papers, intent)       │
 │    └── filter_results(papers, year_range)   │
 │    Claude observes results, decides next    │
 │    step or calls finish_search              │
 │                                             │
 │  All paper metadata comes from API          │
-│  responses — Claude never generates it      │
+│  responses - Claude never generates it      │
 └─────────────────┬───────────────────────────┘
                   │
                   ▼
@@ -55,9 +55,9 @@ User query
 
 ## Key Design Decisions
 
-**No frameworks.** The agent loop is an explicit `while` loop that sends messages to the Claude API, dispatches tool calls, and feeds results back. This makes the control flow readable and debuggable — you can step through every iteration.
+**No frameworks.** The agent loop is an explicit `while` loop that sends messages to the Claude API, dispatches tool calls, and feeds results back. This makes the control flow readable and debuggable - you can step through every iteration.
 
-**Claude never invents metadata.** The model only *decides* what to search for — actual paper data comes exclusively from tool calls to OpenAlex and arXiv. This is a structural guarantee, not a prompt-engineering one: Claude physically cannot return a paper that doesn't exist in a real database because it never generates metadata itself.
+**Claude never invents metadata.** The model only *decides* what to search for - actual paper data comes exclusively from tool calls to OpenAlex and arXiv. This is a structural guarantee, not a prompt-engineering one: Claude physically cannot return a paper that doesn't exist in a real database because it never generates metadata itself.
 
 **Coverage-aware search.** The agent doesn't just fire one query and stop. It uses a `check_coverage` tool to assess whether the current paper set covers all dimensions of the user's intent (methods, recency, source diversity), then searches again to fill gaps.
 
@@ -65,13 +65,13 @@ User query
 
 ## Features
 
-- **Multi-source search** — queries both OpenAlex (200M+ works with citation data) and arXiv (preprints) in parallel
-- **Conversational narrowing** — refines vague queries into structured search profiles before searching
-- **Citation-aware ranking** — results include citation counts from OpenAlex
-- **"Find similar" flow** — select a paper from results and search for related work, with automatic deduplication
-- **Zotero integration** — save papers directly to your Zotero library (v7+ via Connector API, v10+ via local API with collection support)
-- **Eval suite** — gold-standard retrieval evals with recall@K scoring (10 cases spanning ML, neuroscience, crypto, NLP)
-- **Animated terminal UI** — Rich tables and TerminalTextEffects banner with gradient styling
+- **Multi-source search** - queries both OpenAlex (200M+ works with citation data) and arXiv (preprints) in parallel
+- **Conversational narrowing** - refines vague queries into structured search profiles before searching
+- **Citation-aware ranking** - results include citation counts from OpenAlex
+- **"Find similar" flow** - select a paper from results and search for related work, with automatic deduplication
+- **Zotero integration** - save papers directly to your Zotero library (v7+ via Connector API, v10+ via local API with collection support)
+- **Eval suite** - gold-standard retrieval evals with recall@K scoring (10 cases spanning ML, neuroscience, crypto, NLP)
+- **Animated terminal UI** - Rich tables and TerminalTextEffects banner with gradient styling
 
 ## Quickstart
 
@@ -98,9 +98,9 @@ ara "BERT pretraining" --quick
 
 ARA includes a two-tier evaluation framework to measure retrieval quality:
 
-**Tier 1 — Tool-level**: calls `search_openalex` and `search_arxiv` directly against 10 gold-standard queries and checks recall@K. Runs in seconds.
+**Tier 1 - Tool-level**: calls `search_openalex` and `search_arxiv` directly against 10 gold-standard queries and checks recall@K. Runs in seconds.
 
-**Tier 2 — Agent-level**: runs the full ReAct loop with vague, natural-language queries and intent profiles, then checks if the agent finds the target papers through its own reasoning.
+**Tier 2 - Agent-level**: runs the full ReAct loop with vague, natural-language queries and intent profiles, then checks if the agent finds the target papers through its own reasoning.
 
 ```bash
 # Free tool-level evals
@@ -120,7 +120,7 @@ Gold cases include landmark papers (Attention Is All You Need, AlphaFold, BERT, 
 ```
 src/ara/
 ├── cli.py          # Typer CLI, async pipeline orchestration
-├── agent.py        # ReAct loop — message passing with Claude tool use
+├── agent.py        # ReAct loop - message passing with Claude tool use
 ├── tools.py        # Tool schemas + async implementations (OpenAlex, arXiv)
 ├── models.py       # Pydantic models (Paper, SearchIntentProfile)
 ├── dialogue.py     # Conversational intent extraction via Claude
