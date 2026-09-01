@@ -50,7 +50,6 @@ cli.py  ←  presenter.py (Rich output)  ←  validator.py (post-loop DOI check)
 
 - **`agent.py`** — The ReAct loop. Sends messages to Claude with `TOOL_SCHEMAS`, executes tool_use blocks via `execute_tool`, feeds results back, repeats until `stop_reason == "end_turn"`. `_parse_final_response` extracts the JSON paper list from Claude's final text.
 - **`tools.py`** — Three tool schemas (passed to Claude) and their implementations. `execute_tool` dispatches by name and catches errors as JSON for Claude to see. OpenAlex abstracts arrive as inverted indexes and are reconstructed by `_reconstruct_abstract`.
-- **`validator.py`** — Post-loop safety net. Validates DOI papers concurrently via `asyncio.gather` against CrossRef. arXiv-only papers pass by regex. Papers with no identifier are rejected.
 - **`models.py`** — Pydantic models. `Paper.doi_validated` is set only by the validator, never by Claude.
 
 ### Adding a new tool
